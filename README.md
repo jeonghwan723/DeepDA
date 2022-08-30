@@ -14,14 +14,17 @@ The DeepDA model, which is a GAN model for oceanic DA, comprises a generator tha
   - The data set consists of the following:
   
     (1) Training set (CESM2 LE):
+        
         Input: []
         Label: []
         
     (2) Validation set (CESM2 LE):
+        
         Input: []
         Label: []
         
     (3) Test set (HadIOD):
+        
         Input: []
         Label: []
 
