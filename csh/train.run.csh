@@ -29,11 +29,7 @@ python run.train.py
 
 
 
-cp -f {$HHH}/code_paper/sample/mail.sample .
 
-sed "s/expname/$EXP/g"    mail.sample > mail.py
-
-python mail.py
 
 
 
