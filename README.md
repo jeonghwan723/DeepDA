@@ -5,7 +5,7 @@ The DeepDA model, which is a GAN model for oceanic DA, comprises a generator tha
 # Process of DeepDA
 
   1. Training with CESM2 Large Ensemble data set (csh/train.run.csh)
-  2. Generate reanalysis (csh/evaluate.run.csh)
+  2. Generate reanalysis (i.e., test) (csh/evaluate.run.csh)
 
 # Data set (data format: netCDF4)
 
