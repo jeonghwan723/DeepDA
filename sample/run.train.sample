@@ -1,0 +1,41 @@
+#!/usr/bin/env python
+
+import tensorflow as tf
+from tensorflow.keras import Model, datasets, layers, models, backend
+from tensorflow import keras
+from contextlib import redirect_stdout
+import pathlib
+import os
+from netCDF4 import Dataset
+from train import Train
+
+
+os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
+
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"]= "gpu_number"
+
+gpus = tf.config.experimental.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(gpus[0], True)
+
+xdim, ydim, zdim = 360, 180, 38
+
+opath = 'homedir'
+
+exp_name = 'eexxpp'
+
+
+pathlib.Path(opath+'/output/'+exp_name+'/summary').mkdir(parents=True, exist_ok=True)
+pathlib.Path( opath+'/output/'+exp_name+'/model').mkdir(parents=True, exist_ok=True)
+pathlib.Path( opath+'/output/'+exp_name+'/loss').mkdir(parents=True, exist_ok=True)
+
+
+
+
+
+training = Train(xdim,ydim,zdim)
+training.train_model(opath,exp_name,epoch)
+
+
+
+ 

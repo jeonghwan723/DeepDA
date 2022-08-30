@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+
+import smtplib
+
+server = smtplib.SMTP('smtp.gmail.com', 587)
+server.starttls()
+server.login("jys6618@gmail.com", "oqekkscbgkolttvg")
+msg='expname  training end'
+server.sendmail("jys6618@gmail.com","ysjoo0409@gmail.com",msg)
+
+

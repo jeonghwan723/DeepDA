@@ -1,0 +1,254 @@
+#!/usr/bin/env python
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Model, datasets, layers, models, backend
+from tensorflow import keras
+from contextlib import redirect_stdout
+import pathlib
+import os
+import math,time
+from netCDF4 import Dataset
+
+os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
+
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"]= "gpu_number"
+
+
+gpus = tf.config.experimental.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(gpus[0], True)
+
+xdim, ydim, zdim = 360, 180, 38
+
+opath = 'homedir'
+
+exp_name = 'eexxpp'
+
+
+
+pathlib.Path(opath+'/output/'+exp_name+'/summary').mkdir(parents=True, exist_ok=True)
+pathlib.Path( opath+'/output/'+exp_name+'/model').mkdir(parents=True, exist_ok=True)
+
+pathlib.Path( opath+'/output/'+exp_name+'/result/5year/tmp').mkdir(parents=True, exist_ok=True)
+
+
+Ymodel = tf.keras.models.load_model(opath+'/output/'+exp_name+'/model/best.model.hdf5')
+
+telen = 41*73
+
+
+#init_number = (np.random.choice(41-2,1) +1)*73
+
+i = 0
+
+ii = i%73
+
+land = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.land_file.nc','r')
+land = land['t'][0,:zdim]
+land = land.filled(0)
+
+init_map = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/tr_data.nc','r')
+init_map = init_map['t'][73*5,:zdim]
+init_map = np.ma.masked_values(init_map,-9.99e+08)
+init_map = init_map.filled(0)
+
+x_map = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/te_data.nc','r')
+x_map = x_map['t'][i,:zdim]
+x_map = np.ma.masked_values(x_map,-9.99e+08)
+x_map = x_map.filled(0)
+
+mask_info = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.obs_info.nc','r')
+mask_info = mask_info['t'][i,:zdim]
+mask_info = mask_info.filled(0)
+random_error = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.random_error.nc','r')
+random_error = random_error['t'][i,:zdim]
+random_error = random_error.filled(0)
+
+clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
+clim = clim['t'][ii,:zdim]
+clim = np.ma.masked_values(clim,-9.99e+08)
+clim = clim.filled(0)
+
+
+init_map =  init_map - clim
+x_map = x_map - clim
+
+# time,zdim,ydim,xdim
+land = land.reshape(-1,zdim,ydim,xdim,1)
+init_map = init_map.reshape(-1,zdim,ydim,xdim,1)
+x_map = x_map.reshape(-1,zdim,ydim,xdim,1)
+mask_info = mask_info.reshape(-1,zdim,ydim,xdim,1)
+random_error = random_error.reshape(-1,zdim,ydim,xdim,1)
+# ==> time,xdim,ydim,zdim,1
+land = np.swapaxes(land,1,3)
+init_map = np.swapaxes(init_map,1,3)
+x_map = np.swapaxes(x_map,1,3)
+mask_info = np.swapaxes(mask_info,1,3)
+random_error = np.swapaxes(random_error,1,3)
+
+input_x1 = init_map
+input_x2 = x_map*mask_info + random_error*mask_info
+input_x3 = land
+input_x4 = mask_info
+sample_x = np.append(input_x1,input_x2,axis=4)
+sample_x = np.append(sample_x,input_x3,axis=4)
+sample_x = np.append(sample_x,input_x4,axis=4)
+#del init_map,init_y,mask_info,random_error,input_x1,input_x2,input_x3
+
+gen_map = Ymodel.predict([sample_x])
+clim = clim.reshape(-1,zdim,ydim,xdim,1)
+clim = np.swapaxes(clim,1,3)
+ano_map = gen_map
+clim_map = gen_map + clim
+
+ano_name = 'ano_time'+str(i+1).zfill(4)
+gen_name = 'gen_time'+str(i+1).zfill(4)
+
+ano_result = np.swapaxes(ano_map,1,3)
+result = np.swapaxes(clim_map,1,3)
+
+ano_result.astype('float32').tofile(opath+'/output/'+exp_name+'/result/5year/tmp/'+str(ano_name)+'.gdat')
+ctl = open(opath+'/output/'+exp_name+'/result/5year/tmp/'+str(ano_name)+'.ctl','w')
+ctl.write('dset ^'+str(ano_name)+'.gdat\n')
+ctl.write('undef -9.99e+08\n')
+ctl.write('options 365_day_calendar\n')
+ctl.write('xdef   '+str(xdim)+'  linear 0.5  1.0\n')
+ctl.write('ydef   '+str(ydim)+'  linear -90  1.0\n')
+ctl.write('zdef '+str(zdim)+'  levels 5 15 25 35 45 55 65 75 85 95 105 115 125 135 145 155 165.0984 175.47905 186.29128 197.66028 209.71138 222.57828 236.40883 251.37016 267.6542 285.48364 305.11923  326.86798 351.09348 378.22763 408.78464 443.3777 482.73672 527.728 579.37286 638.8626 707.5633 787.0025 \n')
+ctl.write('tdef   1  linear  jan'+str(i+1).zfill(4)+' 5dy\n')
+ctl.write('vars   1\n')
+ctl.write('p    '+str(zdim)+'   1  variable\n')
+ctl.write('ENDVARS\n')
+ctl.close()
+
+os.system('cdo -f nc import_binary '+opath+'/output/'+exp_name+'/result/5year/tmp/'+str(ano_name)+'.ctl '+opath+'/output/'+exp_name+'/result/5year/tmp/'+str(ano_name)+'.nc')
+os.system('rm -f '+opath+'/output/'+exp_name+'/result/5year/tmp/'+str(ano_name)+'.ctl '+opath+'/output/'+exp_name+'/result/5year/tmp/'+str(ano_name)+'.gdat')
+
+
+result.astype('float32').tofile(opath+'/output/'+exp_name+'/result/5year/tmp/'+str(gen_name)+'.gdat')
+ctl = open(opath+'/output/'+exp_name+'/result/5year/tmp/'+str(gen_name)+'.ctl','w')
+ctl.write('dset ^'+str(gen_name)+'.gdat\n')
+ctl.write('undef -9.99e+08\n')
+ctl.write('options 365_day_calendar\n')
+ctl.write('xdef   '+str(xdim)+'  linear 0.5  1.0\n')
+ctl.write('ydef   '+str(ydim)+'  linear -90  1.0\n')
+ctl.write('zdef '+str(zdim)+'  levels 5 15 25 35 45 55 65 75 85 95 105 115 125 135 145 155 165.0984 175.47905 186.29128 197.66028 209.71138 222.57828 236.40883 251.37016 267.6542 285.48364 305.11923  326.86798 351.09348 378.22763 408.78464 443.3777 482.73672 527.728 579.37286 638.8626 707.5633 787.0025 \n')
+ctl.write('tdef   1  linear  jan'+str(i+1).zfill(4)+' 5dy\n')
+ctl.write('vars   1\n')
+ctl.write('p    '+str(zdim)+'   1  variable\n')
+ctl.write('ENDVARS\n')
+ctl.close()
+
+
+os.system('cdo -f nc import_binary '+opath+'/output/'+exp_name+'/result/5year/tmp/'+str(gen_name)+'.ctl '+opath+'/output/'+exp_name+'/result/5year/tmp/'+str(gen_name)+'.nc')
+os.system('rm -f '+opath+'/output/'+exp_name+'/result/5year/tmp/'+str(gen_name)+'.ctl '+opath+'/output/'+exp_name+'/result/5year/tmp/'+str(gen_name)+'.gdat')
+
+for i in range(1,telen) :
+  ii = i%73
+
+  land = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.land_file.nc','r')
+  land = land['t'][0,:zdim]
+  land = land.filled(0)
+  x_map = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/te_data.nc','r')
+  x_map = x_map['t'][i,:zdim]
+  x_map = np.ma.masked_values(x_map,-9.99e+08)
+  x_map = x_map.filled(0)
+
+  mask_info = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.obs_info.nc','r')
+  mask_info = mask_info['t'][i,:zdim]
+  mask_info = mask_info.filled(0)
+  random_error = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.random_error.nc','r')
+  random_error = random_error['t'][i,:zdim]
+  random_error = random_error.filled(0)
+
+  clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
+  clim = clim['t'][ii,:zdim]
+  clim = np.ma.masked_values(clim,-9.99e+08)
+  clim = clim.filled(0)
+
+  x_map = x_map - clim
+
+  # time,zdim,ydim,xdim
+  land = land.reshape(-1,zdim,ydim,xdim,1)
+  x_map = x_map.reshape(-1,zdim,ydim,xdim,1)
+  mask_info = mask_info.reshape(-1,zdim,ydim,xdim,1)
+  random_error = random_error.reshape(-1,zdim,ydim,xdim,1)
+  # ==> time,xdim,ydim,zdim,1
+  land = np.swapaxes(land,1,3)
+  x_map = np.swapaxes(x_map,1,3)
+  mask_info = np.swapaxes(mask_info,1,3)
+  random_error = np.swapaxes(random_error,1,3)
+  input_x1 = gen_map
+  input_x2 = x_map*mask_info + random_error*mask_info
+  input_x3 = land
+  input_x4 = mask_info
+  sample_x = np.append(input_x1,input_x2,axis=4)
+  sample_x = np.append(sample_x,input_x3,axis=4)
+  sample_x = np.append(sample_x,input_x4,axis=4)
+#  del gen_map,init_y,mask_info,random_error,input_x1,input_x2,input_x3
+
+  gen_map = Ymodel.predict([sample_x])
+  clim = clim.reshape(-1,zdim,ydim,xdim,1)
+  clim = np.swapaxes(clim,1,3)
+
+
+  ano_map = gen_map
+  clim_map = gen_map + clim
+
+  ano_name = 'ano_time'+str(i+1).zfill(4)
+  gen_name = 'gen_time'+str(i+1).zfill(4)
+
+  ano_result = np.swapaxes(ano_map,1,3)
+  result = np.swapaxes(clim_map,1,3)
+
+  ano_result.astype('float32').tofile(opath+'/output/'+exp_name+'/result/5year/tmp/'+str(ano_name)+'.gdat')
+  ctl = open(opath+'/output/'+exp_name+'/result/5year/tmp/'+str(ano_name)+'.ctl','w')
+  ctl.write('dset ^'+str(ano_name)+'.gdat\n')
+  ctl.write('undef -9.99e+08\n')
+  ctl.write('options 365_day_calendar\n')
+  ctl.write('xdef   '+str(xdim)+'  linear 0.5  1.0\n')
+  ctl.write('ydef   '+str(ydim)+'  linear -90  1.0\n')
+  ctl.write('zdef '+str(zdim)+'  levels 5 15 25 35 45 55 65 75 85 95 105 115 125 135 145 155 165.0984 175.47905 186.29128 197.66028 209.71138 222.57828 236.40883 251.37016 267.6542 285.48364 305.11923   326.86798 351.09348 378.22763 408.78464 443.3777 482.73672 527.728 579.37286 638.8626 707.5633 787.0025\n')
+  ctl.write('tdef   1  linear  jan'+str(i+1).zfill(4)+' 5dy\n')
+  ctl.write('vars   1\n')
+  ctl.write('p    '+str(zdim)+'   1  variable\n')
+  ctl.write('ENDVARS\n')
+  ctl.close()
+
+
+  os.system('cdo -f nc import_binary '+opath+'/output/'+exp_name+'/result/5year/tmp/'+str(ano_name)+'.ctl '+opath+'/output/'+exp_name+'/result/5year/tmp/'+str(ano_name)+'.nc')
+  os.system('rm -f '+opath+'/output/'+exp_name+'/result/5year/tmp/'+str(ano_name)+'.ctl '+opath+'/output/'+exp_name+'/result/5year/tmp/'+str(ano_name)+'.gdat')
+
+  result.astype('float32').tofile(opath+'/output/'+exp_name+'/result/5year/tmp/'+str(gen_name)+'.gdat')
+  ctl = open(opath+'/output/'+exp_name+'/result/5year/tmp/'+str(gen_name)+'.ctl','w')
+  ctl.write('dset ^'+str(gen_name)+'.gdat\n')
+  ctl.write('undef -9.99e+08\n')
+  ctl.write('options 365_day_calendar\n')
+  ctl.write('xdef   '+str(xdim)+'  linear 0.5  1.0\n')
+  ctl.write('ydef   '+str(ydim)+'  linear -90  1.0\n')
+  ctl.write('zdef '+str(zdim)+'  levels 5 15 25 35 45 55 65 75 85 95 105 115 125 135 145 155 165.0984 175.47905 186.29128 197.66028 209.71138 222.57828 236.40883 251.37016 267.6542 285.48364 305.11923   326.86798 351.09348 378.22763 408.78464 443.3777 482.73672 527.728 579.37286 638.8626 707.5633 787.0025\n')
+  ctl.write('tdef   1  linear  jan'+str(i+1).zfill(4)+' 5dy\n')
+  ctl.write('vars   1\n')
+  ctl.write('p    '+str(zdim)+'   1  variable\n')
+  ctl.write('ENDVARS\n')
+  ctl.close()
+
+
+  os.system('cdo -f nc import_binary '+opath+'/output/'+exp_name+'/result/5year/tmp/'+str(gen_name)+'.ctl '+opath+'/output/'+exp_name+'/result/5year/tmp/'+str(gen_name)+'.nc')
+  os.system('rm -f '+opath+'/output/'+exp_name+'/result/5year/tmp/'+str(gen_name)+'.ctl '+opath+'/output/'+exp_name+'/result/5year/tmp/'+str(gen_name)+'.gdat')
+
+
+
+
+os.system('ncrcat -h '+opath+'/output/'+exp_name+'/result/5year/tmp/ano*.nc '+opath+'/output/'+exp_name+'/result/5year/ano_map.nc')
+
+os.system('ncrcat -h '+opath+'/output/'+exp_name+'/result/5year/tmp/gen*.nc '+opath+'/output/'+exp_name+'/result/5year/gen_map.nc')
+
+
+
+os.system('rm -rf '+opath+'/output/'+exp_name+'/result/5year/tmp/*.nc')
+
+
+
+
+
