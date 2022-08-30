@@ -23,7 +23,7 @@ The DeepDA model, which is a GAN model for oceanic DA, comprises a generator tha
         Input: []
         Label: []
         
-    (3) Test set (HadIOD):
+    (3) Test set (Met Office Hadley Centre Intergrated Ocean Database, HadIOD 1.2.0):
         
         Input: []
         Label: []
