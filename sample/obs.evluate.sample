@@ -45,30 +45,28 @@ i = 0
 
 ii = i%73
 
-land = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.land_file.nc','r')
+land = Dataset('data/land_file.nc','r')
 land = land['t'][0,:zdim]
 land = land.filled(0)
 
-init_map = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/tr_data.nc','r')
+init_map = Dataset('data/tr_data.nc','r')
 init_map = init_map['t'][init_number,:zdim]
 init_map = np.ma.masked_values(init_map,-9.99e+08)
 init_map = init_map.filled(0)
 
 
-obs = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.real_obs.nc','r')
+obs = Dataset('data/real_obs.nc','r')
 obs = obs['t'][i,:zdim]
 obs = np.ma.masked_values(obs,-9.99e+08)
 obs = obs.filled(0) * land
 
 
-mask_info = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.obs_info.nc','r')
+mask_info = Dataset('data/obs_info.nc','r')
 mask_info = mask_info['t'][i,:zdim]
 mask_info = mask_info.filled(0)*land
-random_error = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.random_error.nc','r')
-random_error = random_error['t'][i,:zdim]
-random_error = random_error.filled(0)*land
 
-clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
+
+clim = Dataset('data/clim.nc','r')
 clim = clim['t'][ii,:zdim]
 clim = np.ma.masked_values(clim,-9.99e+08)
 clim = clim.filled(0)
@@ -84,22 +82,22 @@ land = land.reshape(-1,zdim,ydim,xdim,1)
 init_map = init_map.reshape(-1,zdim,ydim,xdim,1)
 x_map = x_map.reshape(-1,zdim,ydim,xdim,1)
 mask_info = mask_info.reshape(-1,zdim,ydim,xdim,1)
-random_error = random_error.reshape(-1,zdim,ydim,xdim,1)
+
 # ==> time,xdim,ydim,zdim,1
 land = np.swapaxes(land,1,3)
 init_map = np.swapaxes(init_map,1,3)
 x_map = np.swapaxes(x_map,1,3)
 mask_info = np.swapaxes(mask_info,1,3)
-random_error = np.swapaxes(random_error,1,3)
+
 
 input_x1 = init_map
-input_x2 = x_map*mask_info  #+ random_error*mask_info
+input_x2 = x_map*mask_info  
 input_x3 = land
 input_x4 = mask_info
 sample_x = np.append(input_x1,input_x2,axis=4)
 sample_x = np.append(sample_x,input_x3,axis=4)
 sample_x = np.append(sample_x,input_x4,axis=4)
-#del init_map,init_y,mask_info,random_error,input_x1,input_x2,input_x3
+
 
 gen_map = Ymodel.predict([sample_x])
 clim = clim.reshape(-1,zdim,ydim,xdim,1)
@@ -178,23 +176,21 @@ os.system('rm -f '+opath+'/output/'+exp_name+'/result/ensemble/tmp/'+str(obs_nam
 for i in range(1,telen) :
   ii = i%73
 
-  land = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.land_file.nc','r')
+  land = Dataset('data/land_file.nc','r')
   land = land['t'][0,:zdim]
   land = land.filled(0)
 
-  obs = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.real_obs.nc','r')
+  obs = Dataset('data/real_obs.nc','r')
   obs = obs['t'][i,:zdim]
   obs = np.ma.masked_values(obs,-9.99e+08)
   obs = obs.filled(0) * land
 
-  mask_info = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.obs_info.nc','r')
+  mask_info = Dataset('data/obs_info.nc','r')
   mask_info = mask_info['t'][i,:zdim]*land
   mask_info = mask_info.filled(0)
-  random_error = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.random_error.nc','r')
-  random_error = random_error['t'][i,:zdim]*land
-  random_error = random_error.filled(0)
 
-  clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
+
+  clim = Dataset('data/clim.nc','r')
   clim = clim['t'][ii,:zdim]
   clim = np.ma.masked_values(clim,-9.99e+08)
   clim = clim.filled(0)
@@ -205,20 +201,20 @@ for i in range(1,telen) :
   land = land.reshape(-1,zdim,ydim,xdim,1)
   x_map = x_map.reshape(-1,zdim,ydim,xdim,1)
   mask_info = mask_info.reshape(-1,zdim,ydim,xdim,1)
-  random_error = random_error.reshape(-1,zdim,ydim,xdim,1)
+
   # ==> time,xdim,ydim,zdim,1
   land = np.swapaxes(land,1,3)
   x_map = np.swapaxes(x_map,1,3)
   mask_info = np.swapaxes(mask_info,1,3)
-  random_error = np.swapaxes(random_error,1,3)
+
   input_x1 = gen_map
-  input_x2 = x_map*mask_info #+ random_error*mask_info
+  input_x2 = x_map*mask_info 
   input_x3 = land
   input_x4 = mask_info
   sample_x = np.append(input_x1,input_x2,axis=4)
   sample_x = np.append(sample_x,input_x3,axis=4)
   sample_x = np.append(sample_x,input_x4,axis=4)
-#  del gen_map,init_y,mask_info,random_error,input_x1,input_x2,input_x3
+
 
   gen_map = Ymodel.predict([sample_x])
   clim = clim.reshape(-1,zdim,ydim,xdim,1)
