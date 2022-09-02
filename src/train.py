@@ -80,7 +80,6 @@ class Train(Module) :
     tr_epoch = 0
     for epoch in range(epochs) :
       init_number = (np.random.choice(41-2,1) +1)*73
-#      init_number = 2409
       start = time.time()
       i = 0
       ii = i%73
@@ -164,7 +163,7 @@ class Train(Module) :
   
       gen_map = gen_model.predict(sample_x)
 
-      print('batch:',0,'int:',init_number,gen_map[:,0,0,0,0],'dis:',total_dis_loss,'gen:',total_gen_loss)
+
       for i in range(1,total_batch) :
         ii = i%73
         i0 = (i-1)%73
@@ -233,8 +232,7 @@ class Train(Module) :
         # Train generator
         total_gen_loss = combined_model.train_on_batch([sample_x],[real_label,sample_y])
         gen_map = gen_model.predict(sample_x)
-        if i%100 ==0 :
-          print('batch:',i,gen_map[:,0,0,0,0],'dis:',total_dis_loss,'gen:',total_gen_loss)
+
   
   
       # epoch loss
