@@ -29,9 +29,6 @@ The DeepDA model, which is a GAN model for oceanic DA, comprises a generator tha
 
 
 # Requirement (python packages)
-Tensowflow (> version 2.0, https://www.tensorflow.org/install/)
-
-netCDF4
-
-numpy
-
+  - Tensowflow (> version 2.0, https://www.tensorflow.org/install/)
+  - netCDF4
+  - numpy
