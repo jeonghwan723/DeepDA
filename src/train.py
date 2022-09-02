@@ -85,37 +85,37 @@ class Train(Module) :
       ii = i%73
       i0 = 72
   
-      land = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.land_file.nc','r')
+      land = Dataset('data/land_file.nc','r')
       land = land['t'][0,:self.zdim]
       land = land.filled(0)
-      init_map = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/tr_data.nc','r')
+      init_map = Dataset('data/tr_data.nc','r')
       init_map = init_map['t'][init_number,:self.zdim]
       init_map = np.ma.masked_values(init_map,-9.99e+08)
       init_map = init_map.filled(0)
-      x_map = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/tr_data.nc','r')
+      x_map = Dataset('data/tr_data.nc','r')
       x_map = x_map['t'][i,:self.zdim]
       x_map = np.ma.masked_values(x_map,-9.99e+08)
       x_map = x_map.filled(0)
-      init_y = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.init_y.nc','r')
+      init_y = Dataset('data/init_y.nc','r')
       init_y = init_y['t'][0,:self.zdim]
       init_y = np.ma.masked_values(init_y,-9.99e+08)
       init_y = init_y.filled(0)
   
-      clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
+      clim = Dataset('data/clim.nc','r')
       clim = clim['t'][ii,:self.zdim]
       clim = np.ma.masked_values(clim,-9.99e+08)
       clim = clim.filled(0)
   
-      init_clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
+      init_clim = Dataset('data/clim.nc','r')
       init_clim = init_clim['t'][i0,:self.zdim]
       init_clim = np.ma.masked_values(init_clim,-9.99e+08)
       init_clim = init_clim.filled(0)
   
   
-      mask_info = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.obs_info.nc','r')
+      mask_info = Dataset('data/obs_info.nc','r')
       mask_info = mask_info['t'][i,:self.zdim]
       mask_info = mask_info.filled(0)
-      random_error = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.random_error.nc','r')
+      random_error = Dataset('data/random_error.nc','r')
       random_error = random_error['t'][i,:self.zdim]
       random_error = random_error.filled(0)
   
