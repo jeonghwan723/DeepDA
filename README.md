@@ -15,17 +15,17 @@ The DeepDA model, which is a GAN model for oceanic DA, comprises a generator tha
   
     (1) Training set (CESM2 LE):
         
-        Input: [land_file.nc,tr_data.nc,init_y.nc,clim.nc,obs_info.nc,random_error.nc]
+        Input: [land_file.nc], [tr_data.nc], [init_y.nc], [clim.nc], [obs_info.nc] and [random_error.nc]
         Label: [tr_data.nc]
         
     (2) Validation set (CESM2 LE):
         
-        Input: [land_file.nc,tr_data.nc,val_data.nc,init_y.nc,clim.nc,obs_info.nc,random_error.nc]
+        Input: [land_file.nc], [tr_data.nc], [val_data.nc], [init_y.nc], [clim.nc], [obs_info.nc] and [random_error.nc]
         Label: [val_data.nc]
         
     (3) Test set (Met Office Hadley Centre Intergrated Ocean Database, HadIOD 1.2.0):
         
-        Input: [land_file.nc,tr_data.nc,real_obs.nc,clim.nc,obs_info.nc]
+        Input: [land_file.nc], [tr_data.nc], [real_obs.nc], [clim.nc] and [obs_info.nc]
 
 
 # Requirement (python packages)
