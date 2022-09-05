@@ -16,17 +16,10 @@ class Train(Module) :
     self.zdim = zdim
 
     
-
   def train_model(self,opath,exp_name,epochs) :
 
-    dis_shape = self.model(self.xdim,self.ydim,self.zdim)[0]
+    dis_shape,dis_model,gen_model,combined_model = self.model(self.xdim,self.ydim,self.zdim)
 
-    dis_model = self.model(self.xdim,self.ydim,self.zdim)[1]
-    gen_model = self.model(self.xdim,self.ydim,self.zdim)[2]
-    combined_model = self.model(self.xdim,self.ydim,self.zdim)[3]
-
-
-  
     real_label = np.ones((1,) + dis_shape)
     fake_label = np.zeros((1,) + dis_shape)
 
