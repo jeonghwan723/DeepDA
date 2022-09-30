@@ -45,55 +45,45 @@ i = 0
 
 ii = i%73
 
-land = Dataset('data/land_file.nc','r')
+
+land = Dataset('data/Land_Mask.nc','r')
 land = land['t'][0,:zdim]
 land = land.filled(0)
 
-init_map = Dataset('data/tr_data.nc','r')
-init_map = init_map['t'][init_number,:zdim]
-init_map = np.ma.masked_values(init_map,-9.99e+08)
-init_map = init_map.filled(0)
+background_map = Dataset('data/Traing_Dataset_Masked_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+background_map = background_map['t'][init_number+1,:zdim]
+background_map = np.ma.masked_values(background_map,-9.99e+08)
+background_map = background_map.filled(0)
 
 
-obs = Dataset('data/real_obs.nc','r')
-obs = obs['t'][i,:zdim]
-obs = np.ma.masked_values(obs,-9.99e+08)
-obs = obs.filled(0) * land
+observation_map = Dataset('data/HadIOD_version1.2.0.0_Ocean_Potential_Anomaly.nc','r')
+observation_map = observation_map['t'][i,:zdim]
+observation_map = np.ma.masked_values(observation_map,-9.99e+08)
+observation_map = observation_map.filled(0) * land
 
 
-mask_info = Dataset('data/obs_info.nc','r')
-mask_info = mask_info['t'][i,:zdim]
-mask_info = mask_info.filled(0)*land
-
-
-clim = Dataset('data/clim.nc','r')
-clim = clim['t'][ii,:zdim]
-clim = np.ma.masked_values(clim,-9.99e+08)
-clim = clim.filled(0)
-
-
-init_map =  init_map - clim
-x_map =  obs - (clim*mask_info)
-
+observation_mask = Dataset('data/Observation_Mask.nc','r')
+observation_mask = observation_mask['t'][i,:zdim]
+observation_mask = observation_mask.filled(0)*land
 
 
 # time,zdim,ydim,xdim
 land = land.reshape(-1,zdim,ydim,xdim,1)
-init_map = init_map.reshape(-1,zdim,ydim,xdim,1)
-x_map = x_map.reshape(-1,zdim,ydim,xdim,1)
-mask_info = mask_info.reshape(-1,zdim,ydim,xdim,1)
+background_map = background_map.reshape(-1,zdim,ydim,xdim,1)
+observation_map = observation_map.reshape(-1,zdim,ydim,xdim,1)
+observation_mask = observation_mask.reshape(-1,zdim,ydim,xdim,1)
 
 # ==> time,xdim,ydim,zdim,1
 land = np.swapaxes(land,1,3)
-init_map = np.swapaxes(init_map,1,3)
-x_map = np.swapaxes(x_map,1,3)
-mask_info = np.swapaxes(mask_info,1,3)
+background_map = np.swapaxes(background_map,1,3)
+observation_map = np.swapaxes(observation_map,1,3)
+observation_mask = np.swapaxes(observation_mask`,1,3)
 
 
-input_x1 = init_map
-input_x2 = x_map*mask_info  
+input_x1 = background_map
+input_x2 = observation_map  
 input_x3 = land
-input_x4 = mask_info
+input_x4 = observation_mask
 sample_x = np.append(input_x1,input_x2,axis=4)
 sample_x = np.append(sample_x,input_x3,axis=4)
 sample_x = np.append(sample_x,input_x4,axis=4)
@@ -176,41 +166,36 @@ os.system('rm -f '+opath+'/output/'+exp_name+'/result/ensemble/tmp/'+str(obs_nam
 for i in range(1,telen) :
   ii = i%73
 
-  land = Dataset('data/land_file.nc','r')
+  land = Dataset('data/Land_Mask.nc','r')
   land = land['t'][0,:zdim]
   land = land.filled(0)
 
-  obs = Dataset('data/real_obs.nc','r')
-  obs = obs['t'][i,:zdim]
-  obs = np.ma.masked_values(obs,-9.99e+08)
-  obs = obs.filled(0) * land
-
-  mask_info = Dataset('data/obs_info.nc','r')
-  mask_info = mask_info['t'][i,:zdim]*land
-  mask_info = mask_info.filled(0)
+  observation_map = Dataset('data/HadIOD_version1.2.0.0_Ocean_Potential_Anomaly.nc','r')
+  observation_map = observation_map['t'][i,:zdim]
+  observation_map = np.ma.masked_values(observation_map,-9.99e+08)
+  observation_map = observation_map.filled(0) * land
 
 
-  clim = Dataset('data/clim.nc','r')
-  clim = clim['t'][ii,:zdim]
-  clim = np.ma.masked_values(clim,-9.99e+08)
-  clim = clim.filled(0)
+  observation_mask = Dataset('data/Observation_Mask.nc','r')
+  observation_mask = observation_mask['t'][i,:zdim]
+  observation_mask = observation_mask.filled(0)*land
 
-  x_map = obs - clim*mask_info
+
 
   # time,zdim,ydim,xdim
   land = land.reshape(-1,zdim,ydim,xdim,1)
-  x_map = x_map.reshape(-1,zdim,ydim,xdim,1)
-  mask_info = mask_info.reshape(-1,zdim,ydim,xdim,1)
+  observation_map = observation_map.reshape(-1,zdim,ydim,xdim,1)
+  observation_mask = observation_mask.reshape(-1,zdim,ydim,xdim,1)
 
   # ==> time,xdim,ydim,zdim,1
   land = np.swapaxes(land,1,3)
-  x_map = np.swapaxes(x_map,1,3)
-  mask_info = np.swapaxes(mask_info,1,3)
+  observation_map = np.swapaxes(observation_map,1,3)
+  observation_mask = np.swapaxes(observation_mask,1,3)
 
   input_x1 = gen_map
-  input_x2 = x_map*mask_info 
+  input_x2 = observation_map
   input_x3 = land
-  input_x4 = mask_info
+  input_x4 = observation_mask
   sample_x = np.append(input_x1,input_x2,axis=4)
   sample_x = np.append(sample_x,input_x3,axis=4)
   sample_x = np.append(sample_x,input_x4,axis=4)
