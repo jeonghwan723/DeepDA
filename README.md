@@ -44,3 +44,6 @@ The DeepDA model, which is a GAN model for oceanic DA, comprises a generator tha
   - Tensowflow = 2.2.0 (https://www.tensorflow.org/install/)
   - netCDF4 = 1.5.3
   - numpy = 1.19.1
+
+# License
+This project is covered under the MIT License.
