@@ -14,6 +14,7 @@ The DeepDA model, which is a GAN model for oceanic DA, comprises a generator tha
   - The data set consists of the following:
   
     (1) Training set (CESM2 LE):
+    
         - Input
           1) Traing_Dataset_Masked_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc
           2) Observation_Mask.nc
@@ -22,6 +23,7 @@ The DeepDA model, which is a GAN model for oceanic DA, comprises a generator tha
           1) Traing_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc
        
     (2) Validation set (CESM2 LE):
+    
         - Input
           1) Validation_Dataset_Masked_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc
           2) Observation_Mask.nc
@@ -30,6 +32,7 @@ The DeepDA model, which is a GAN model for oceanic DA, comprises a generator tha
           1) Validation_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc
 
     (3) Test set (Met Office Hadley Centre Intergrated Ocean Database, HadIOD 1.2.0):
+    
         - Input
           1) HadIOD_version1.2.0.0_Ocean_Potential_Anomaly.nc
           2) Observation_Mask.nc
