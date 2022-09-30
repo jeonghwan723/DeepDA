@@ -19,10 +19,6 @@ class Train(Module) :
 
   def train_model(self,opath,exp_name,epochs) :
 
-#    dis_shape = self.model(self.xdim,self.ydim,self.zdim)[0]
-#    dis_model = self.model(self.xdim,self.ydim,self.zdim)[1]
-#    gen_model = self.model(self.xdim,self.ydim,self.zdim)[2]
-#    combined_model = self.model(self.xdim,self.ydim,self.zdim)[3]
     dis_shape,dis_model,gen_model,combined_model = self.model(self.xdim,self.ydim,self.zdim)
 
   
@@ -78,77 +74,72 @@ class Train(Module) :
 
     tr_epoch = 0
     for epoch in range(epochs) :
-      init_number = (np.random.choice(41-2,1) +1)*73
-#      init_number = 2409
+      init_number = (np.random.choice(41-2,1) +1)*73 
+
       start = time.time()
       i = 0
       ii = i%73
       i0 = 72
+      
+      # Traing_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc: Only Using Discriminator at 1st time
+      #
+      
+      background_map = Dataset('data/Traing_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+      background_map = background_map['t'][init_number+1,:self.zdim]
+      background_map = np.ma.masked_values(background_map,-9.99e+08)
+      background_map = background_map.filled(0)
+      
+      observation_map = Dataset('data/Traing_Dataset_Masked_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+      observation_map = observation_map['t'][i,:self.zdim]
+      observation_map = np.ma.masked_values(observation_map,-9.99e+08)
+      observation_map = observation_map.filled(0)
+      
+      label_map = Dataset('data/Traing_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+      label_map = label_map['t'][i+1,:self.zdim]
+      label_map = np.ma.masked_values(label_map,-9.99e+08)
+      label_map = label_map.filled(0)
+      
+      initial_dis_map = Dataset('data/Traing_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+      initial_dis_map = initial_dis_map['t'][0,:self.zdim]
+      initial_dis_map = np.ma.masked_values(initial_dis_map,-9.99e+08)
+      initial_dis_map = initial_dis_map.filled(0)
   
-      land = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.land_file.nc','r')
+      # Observation_Mask: Only 0 or 1
+      observation_mask = Dataset('data/Observation_Mask','r')
+      observation_mask = obs_mask['t'][i,:self.zdim]
+      observation_mask = obs_mask.filled(0)
+      
+      land = Dataset('data/Land_Mask.nc','r')
       land = land['t'][0,:self.zdim]
       land = land.filled(0)
-      init_map = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/tr_data.nc','r')
-      init_map = init_map['t'][init_number,:self.zdim]
-      init_map = np.ma.masked_values(init_map,-9.99e+08)
-      init_map = init_map.filled(0)
-      x_map = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/tr_data.nc','r')
-      x_map = x_map['t'][i,:self.zdim]
-      x_map = np.ma.masked_values(x_map,-9.99e+08)
-      x_map = x_map.filled(0)
-      init_y = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.init_y.nc','r')
-      init_y = init_y['t'][0,:self.zdim]
-      init_y = np.ma.masked_values(init_y,-9.99e+08)
-      init_y = init_y.filled(0)
   
-      clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
-      clim = clim['t'][ii,:self.zdim]
-      clim = np.ma.masked_values(clim,-9.99e+08)
-      clim = clim.filled(0)
-  
-      init_clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
-      init_clim = init_clim['t'][i0,:self.zdim]
-      init_clim = np.ma.masked_values(init_clim,-9.99e+08)
-      init_clim = init_clim.filled(0)
-  
-  
-      mask_info = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.obs_info.nc','r')
-      mask_info = mask_info['t'][i,:self.zdim]
-      mask_info = mask_info.filled(0)
-      random_error = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.random_error.nc','r')
-      random_error = random_error['t'][i,:self.zdim]
-      random_error = random_error.filled(0)
-  
-  
-      init_map =  init_map - clim
-      x_map = x_map - clim
-      init_y = init_y - init_clim
-  
-      # time,zdim,ydim,xdim
+      # reshape [time,zdim,ydim,xdim => time,zdim,ydim,xdim,1]
       land = land.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      init_map = init_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      x_map = x_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      init_y = init_y.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      mask_info = mask_info.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      random_error = random_error.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      # ==> time,xdim,ydim,zdim,1
+      background_map = background_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+      observation_map = observation_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+      label_map = label_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+      initial_dis_map = initial_dis_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+      observation_mask = observation_mask.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+
+      # axes change [time,zdim,ydim,xdim,1 => time,xdim,ydim,zdim,1]
       land = np.swapaxes(land,1,3)
-      init_map = np.swapaxes(init_map,1,3)
-      x_map = np.swapaxes(x_map,1,3)
-      init_y = np.swapaxes(init_y,1,3)
-      mask_info = np.swapaxes(mask_info,1,3)
-      random_error = np.swapaxes(random_error,1,3)
+      background_map = np.swapaxes(background_map,1,3)
+      observation_map = np.swapaxes(observation_map,1,3)
+      label_map = np.swapaxes(label_map,1,3)
+      initial_dis_map = np.swapaxes(initial_dis_map,1,3)
+      observation_mask = np.swapaxes(observation_mask,1,3)
+ 
   
-      input_x1 = init_map
-      input_x2 = x_map*mask_info + random_error
+      input_x1 = background_map
+      input_x2 = observation_map
       input_x3 = land
-      input_x4 = mask_info
+      input_x4 = observation_mask
       sample_x = np.append(input_x1,input_x2,axis=4)
       sample_x = np.append(sample_x,input_x3,axis=4)
       sample_x = np.append(sample_x,input_x4,axis=4)
   
-      sample_y0 = init_y
-      sample_y = x_map
+      sample_y0 = initial_dis_map
+      sample_y = label_map
   
       dis_real_sample = np.append(sample_y,sample_y0,axis=4)
       gen_map = gen_model.predict(sample_x)
@@ -167,59 +158,62 @@ class Train(Module) :
       for i in range(1,total_batch) :
         ii = i%73
         i0 = (i-1)%73
-        land = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.land_file.nc','r')
+        
+        observation_map = Dataset('data/Traing_Dataset_Masked_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+        observation_map = observation_map['t'][i,:self.zdim]
+        observation_map = np.ma.masked_values(observation_map,-9.99e+08)
+        observation_map = observation_map.filled(0)
+        
+
+        label_map = Dataset('data/Traing_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+        label_map = label_map['t'][i+1,:self.zdim]
+        label_map = np.ma.masked_values(label_map,-9.99e+08)
+        label_map = label_map.filled(0)
+        
+        initial_dis_map = Dataset('data/Traing_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+        initial_dis_map = initial_dis_map['t'][i,:self.zdim]
+        initial_dis_map = np.ma.masked_values(initial_dis_map,-9.99e+08)
+        initial_dis_map = initial_dis_map.filled(0)
+  
+  
+        observation_mask = Dataset('data/Observation_Mask','r')
+        observation_mask = observation_mask['t'][i,:self.zdim]
+        observation_mask = observation_mask.filled(0)
+        
+
+        
+        land = Dataset('data/Land_Mask.nc','r')
         land = land['t'][0,:self.zdim]
         land = land.filled(0)
-        x_map = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/tr_data.nc','r')
-        x_map = x_map['t'][i,:self.zdim]
-        x_map = np.ma.masked_values(x_map,-9.99e+08)
-        x_map = x_map.filled(0)
-        init_y = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/tr_data.nc','r')
-        init_y = init_y['t'][i-1,:self.zdim]
-        init_y = np.ma.masked_values(init_y,-9.99e+08)
-        init_y = init_y.filled(0)
-        clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
-        clim = clim['t'][ii,:self.zdim]
-        clim = np.ma.masked_values(clim,-9.99e+08)
-        clim = clim.filled(0)
+ 
   
-        init_clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
-        init_clim = init_clim['t'][i0,:self.zdim]
-        init_clim = np.ma.masked_values(init_clim,-9.99e+08)
-        init_clim = init_clim.filled(0)
-  
-  
-        mask_info = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.obs_info.nc','r')
-        mask_info = mask_info['t'][i,:self.zdim]
-        mask_info = mask_info.filled(0)
-        random_error = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.random_error.nc','r')
-        random_error = random_error['t'][i,:self.zdim]
-        random_error = random_error.filled(0)
-        x_map = x_map - clim
-        init_y = init_y - init_clim
-  
-  
-        # time,zdim,ydim,xdim
+        # reshape [time,zdim,ydim,xdim => time,zdim,ydim,xdim,1]
+    
         land = land.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-        x_map = x_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-        init_y = init_y.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-        mask_info = mask_info.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-        random_error = random_error.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-        # ==> time,xdim,ydim,zdim,1
+        observation_map = observation_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+        label_map = label_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+        initial_dis_map = initial_dis_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+        observation_mask = observation_mask.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+        
+        # axes change [time,zdim,ydim,xdim,1 => time,xdim,ydim,zdim,1]
         land = np.swapaxes(land,1,3)
-        x_map = np.swapaxes(x_map,1,3)
-        init_y = np.swapaxes(init_y,1,3)
-        mask_info = np.swapaxes(mask_info,1,3)
-        random_error = np.swapaxes(random_error,1,3)
+        observation_map = np.swapaxes(observation_map,1,3)
+        label_map = np.swapaxes(label_map,1,3)
+        initial_dis_map = np.swapaxes(initial_dis_map,1,3)
+        observation_mask = np.swapaxes(observation_mask,1,3)
+ 
         input_x1 = gen_map
-        input_x2 = x_map*mask_info + random_error
+        input_x2 = observation_map
         input_x3 = land
-        input_x4 = mask_info
+        input_x4 = observation_mask
         sample_x = np.append(input_x1,input_x2,axis=4)
         sample_x = np.append(sample_x,input_x3,axis=4)
         sample_x = np.append(sample_x,input_x4,axis=4)
-        sample_y0 = init_y
-        sample_y = x_map
+  
+        sample_y0 = initial_dis_map
+        sample_y = label_map
+
+
   
         dis_real_sample = np.append(sample_y,sample_y0,axis=4)
         gen_map = gen_model.predict(sample_x)
@@ -248,72 +242,64 @@ class Train(Module) :
       i = 0
       ii = i%73
       i0 = 72
-      land = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.land_file.nc','r')
+      
+      background_map = Dataset('data/Traing_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+      background_map = background_map['t'][init_number+1,:self.zdim]
+      background_map = np.ma.masked_values(background_map,-9.99e+08)
+      background_map = background_map.filled(0)
+      
+      observation_map = Dataset('data/Traing_Dataset_Masked_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+      observation_map = observation_map['t'][i,:self.zdim]
+      observation_map = np.ma.masked_values(observation_map,-9.99e+08)
+      observation_map = observation_map.filled(0)
+      
+      label_map = Dataset('data/Traing_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+      label_map = label_map['t'][i+1,:self.zdim]
+      label_map = np.ma.masked_values(label_map,-9.99e+08)
+      label_map = label_map.filled(0)
+      
+      initial_dis_map = Dataset('data/Traing_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+      initial_dis_map = initial_dis_map['t'][0,:self.zdim]
+      initial_dis_map = np.ma.masked_values(initial_dis_map,-9.99e+08)
+      initial_dis_map = initial_dis_map.filled(0)
+  
+      # Observation_Mask: Only 0 or 1
+      observation_mask = Dataset('data/Observation_Mask','r')
+      observation_mask = obs_mask['t'][i,:self.zdim]
+      observation_mask = obs_mask.filled(0)
+      
+      land = Dataset('data/Land_Mask.nc','r')
       land = land['t'][0,:self.zdim]
       land = land.filled(0)
-      init_map = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/tr_data.nc','r')
-      init_map = init_map['t'][init_number,:self.zdim]
-      init_map = np.ma.masked_values(init_map,-9.99e+08)
-      init_map = init_map.filled(0)
-      x_map = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/tr_data.nc','r')
-      x_map = x_map['t'][i,:self.zdim]
-      x_map = np.ma.masked_values(x_map,-9.99e+08)
-      x_map = x_map.filled(0)
-      init_y = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.init_y.nc','r')
-      init_y = init_y['t'][0,:self.zdim]
-      init_y = np.ma.masked_values(init_y,-9.99e+08)
-      init_y = init_y.filled(0)
   
-      clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
-      clim = clim['t'][ii,:self.zdim]
-      clim = np.ma.masked_values(clim,-9.99e+08)
-      clim = clim.filled(0)
-  
-      init_clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
-      init_clim = init_clim['t'][i0,:self.zdim]
-      init_clim = np.ma.masked_values(init_clim,-9.99e+08)
-      init_clim = init_clim.filled(0)
-  
-  
-  
-  
-  
-      mask_info = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.obs_info.nc','r')
-      mask_info = mask_info['t'][i,:self.zdim]
-      mask_info = mask_info.filled(0)
-      random_error = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.random_error.nc','r')
-      random_error = random_error['t'][i,:self.zdim]
-      random_error = random_error.filled(0)
-  
-      init_map =  init_map - clim
-      x_map = x_map - clim
-      init_y = init_y - init_clim
-  
-      # time,zdim,ydim,xdim
+      # reshape [time,zdim,ydim,xdim => time,zdim,ydim,xdim,1]
       land = land.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      init_map = init_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      x_map = x_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      init_y = init_y.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      mask_info = mask_info.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      random_error = random_error.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      # ==> time,xdim,ydim,zdim,1
+      background_map = background_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+      observation_map = observation_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+      label_map = label_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+      initial_dis_map = initial_dis_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+      observation_mask = observation_mask.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+
+      # axes change [time,zdim,ydim,xdim,1 => time,xdim,ydim,zdim,1]
       land = np.swapaxes(land,1,3)
-      init_map = np.swapaxes(init_map,1,3)
-      x_map = np.swapaxes(x_map,1,3)
-      init_y = np.swapaxes(init_y,1,3)
-      mask_info = np.swapaxes(mask_info,1,3)
-      random_error = np.swapaxes(random_error,1,3)
+      background_map = np.swapaxes(background_map,1,3)
+      observation_map = np.swapaxes(observation_map,1,3)
+      label_map = np.swapaxes(label_map,1,3)
+      initial_dis_map = np.swapaxes(initial_dis_map,1,3)
+      observation_mask = np.swapaxes(observation_mask,1,3)
+ 
   
-      input_x1 = init_map
-      input_x2 = x_map*mask_info + random_error
+      input_x1 = background_map
+      input_x2 = observation_map
       input_x3 = land
-      input_x4 = mask_info
+      input_x4 = observation_mask
       sample_x = np.append(input_x1,input_x2,axis=4)
       sample_x = np.append(sample_x,input_x3,axis=4)
       sample_x = np.append(sample_x,input_x4,axis=4)
-      sample_y0 = init_y
-      sample_y = x_map
   
+      sample_y0 = initial_dis_map
+      sample_y = label_map
+
       tr_dis_real_sample = np.append(sample_y,sample_y0,axis=4)
   
       tr_gen_map = gen_model.predict(sample_x)
@@ -344,63 +330,60 @@ class Train(Module) :
   
         ii = i%73
         i0 = (i-1)%73
-        land = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.land_file.nc','r')
+        observation_map = Dataset('data/Traing_Dataset_Masked_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+        observation_map = observation_map['t'][i,:self.zdim]
+        observation_map = np.ma.masked_values(observation_map,-9.99e+08)
+        observation_map = observation_map.filled(0)
+        
+
+        label_map = Dataset('data/Traing_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+        label_map = label_map['t'][i+1,:self.zdim]
+        label_map = np.ma.masked_values(label_map,-9.99e+08)
+        label_map = label_map.filled(0)
+        
+        initial_dis_map = Dataset('data/Traing_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+        initial_dis_map = initial_dis_map['t'][i,:self.zdim]
+        initial_dis_map = np.ma.masked_values(initial_dis_map,-9.99e+08)
+        initial_dis_map = initial_dis_map.filled(0)
+  
+  
+        observation_mask = Dataset('data/Observation_Mask','r')
+        observation_mask = observation_mask['t'][i,:self.zdim]
+        observation_mask = observation_mask.filled(0)
+        
+
+        
+        land = Dataset('data/Land_Mask.nc','r')
         land = land['t'][0,:self.zdim]
         land = land.filled(0)
-        x_map = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/tr_data.nc','r')
-        x_map = x_map['t'][i,:self.zdim]
-        x_map = np.ma.masked_values(x_map,-9.99e+08)
-        x_map = x_map.filled(0)
-        init_y = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/tr_data.nc','r')
-        init_y = init_y['t'][i-1,:self.zdim]
-        init_y = np.ma.masked_values(init_y,-9.99e+08)
-        init_y = init_y.filled(0)
+ 
   
-        clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
-        clim = clim['t'][ii,:self.zdim]
-        clim = np.ma.masked_values(clim,-9.99e+08)
-        clim = clim.filled(0)
-  
-        init_clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
-        init_clim = init_clim['t'][i0,:self.zdim]
-        init_clim = np.ma.masked_values(init_clim,-9.99e+08)
-        init_clim = init_clim.filled(0)
-  
-  
-        mask_info = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.obs_info.nc','r')
-        mask_info = mask_info['t'][i,:self.zdim]
-        mask_info = mask_info.filled(0)
-        random_error = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.random_error.nc','r')
-        random_error = random_error['t'][i,:self.zdim]
-        random_error = random_error.filled(0)
-        x_map = x_map - clim
-        init_y = init_y - init_clim
-  
-        # time,zdim,ydim,xdim
+        # reshape [time,zdim,ydim,xdim => time,zdim,ydim,xdim,1]
+    
         land = land.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-        x_map = x_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-        init_y = init_y.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-        mask_info = mask_info.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-        random_error = random_error.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-        # ==> time,xdim,ydim,zdim,1
+        observation_map = observation_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+        label_map = label_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+        initial_dis_map = initial_dis_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+        observation_mask = observation_mask.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+        
+        # axes change [time,zdim,ydim,xdim,1 => time,xdim,ydim,zdim,1]
         land = np.swapaxes(land,1,3)
-        x_map = np.swapaxes(x_map,1,3)
-        init_y = np.swapaxes(init_y,1,3)
-        mask_info = np.swapaxes(mask_info,1,3)
-        random_error = np.swapaxes(random_error,1,3)
+        observation_map = np.swapaxes(observation_map,1,3)
+        label_map = np.swapaxes(label_map,1,3)
+        initial_dis_map = np.swapaxes(initial_dis_map,1,3)
+        observation_mask = np.swapaxes(observation_mask,1,3)
+ 
         input_x1 = tr_gen_map
-  
-  
-  
-        input_x2 = x_map*mask_info + random_error
+        input_x2 = observation_map
         input_x3 = land
-        input_x4 = mask_info
+        input_x4 = observation_mask
         sample_x = np.append(input_x1,input_x2,axis=4)
         sample_x = np.append(sample_x,input_x3,axis=4)
         sample_x = np.append(sample_x,input_x4,axis=4)
-        sample_y0 = init_y
-        sample_y = x_map
   
+        sample_y0 = initial_dis_map
+        sample_y = label_map
+
         tr_dis_real_sample = np.append(sample_y,sample_y0,axis=4)
   
         tr_gen_map = gen_model.predict(sample_x)
@@ -447,72 +430,63 @@ class Train(Module) :
       ii = i%73
       i0 = 72
   
-      land = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.land_file.nc','r')
+      background_map = Dataset('data/Traing_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+      background_map = background_map['t'][init_number+1,:self.zdim]
+      background_map = np.ma.masked_values(background_map,-9.99e+08)
+      background_map = background_map.filled(0)
+      
+      observation_map = Dataset('data/Validation_Dataset_Masked_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+      observation_map = observation_map['t'][i,:self.zdim]
+      observation_map = np.ma.masked_values(observation_map,-9.99e+08)
+      observation_map = observation_map.filled(0)
+      
+      label_map = Dataset('data/Vadlidation_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+      label_map = label_map['t'][i+1,:self.zdim]
+      label_map = np.ma.masked_values(label_map,-9.99e+08)
+      label_map = label_map.filled(0)
+      
+      initial_dis_map = Dataset('data/Vadlidation_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+      initial_dis_map = initial_dis_map['t'][0,:self.zdim]
+      initial_dis_map = np.ma.masked_values(initial_dis_map,-9.99e+08)
+      initial_dis_map = initial_dis_map.filled(0)
+  
+      # Observation_Mask: Only 0 or 1
+      observation_mask = Dataset('data/Observation_Mask','r')
+      observation_mask = obs_mask['t'][i,:self.zdim]
+      observation_mask = obs_mask.filled(0)
+      
+      land = Dataset('data/Land_Mask.nc','r')
       land = land['t'][0,:self.zdim]
       land = land.filled(0)
-      init_map = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/tr_data.nc','r')
-      init_map = init_map['t'][init_number,:self.zdim]
-      init_map = np.ma.masked_values(init_map,-9.99e+08)
-      init_map = init_map.filled(0)
-      x_map = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/val_data.nc','r')
-      x_map = x_map['t'][i,:self.zdim]
-      x_map = np.ma.masked_values(x_map,-9.99e+08)
-      x_map = x_map.filled(0)
-      init_y = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/tr_data.nc','r')
-      init_y = init_y['t'][trlen-1,:self.zdim]
-      init_y = np.ma.masked_values(init_y,-9.99e+08)
-      init_y = init_y.filled(0)
   
-      clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
-      clim = clim['t'][ii,:self.zdim]
-      clim = np.ma.masked_values(clim,-9.99e+08)
-      clim = clim.filled(0)
-  
-  
-  
-      init_clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
-      init_clim = init_clim['t'][i0,:self.zdim]
-      init_clim = np.ma.masked_values(init_clim,-9.99e+08)
-      init_clim = init_clim.filled(0)
-  
-  
-      mask_info = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.obs_info.nc','r')
-      mask_info = mask_info['t'][i,:self.zdim]
-      mask_info = mask_info.filled(0)
-      random_error = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.random_error.nc','r')
-      random_error = random_error['t'][i,:self.zdim]
-      random_error = random_error.filled(0)
-  
-      init_map =  init_map - clim
-      x_map = x_map - clim
-      init_y = init_y - init_clim
-  
-  
-      # time,zdim,ydim,xdim
+      # reshape [time,zdim,ydim,xdim => time,zdim,ydim,xdim,1]
       land = land.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      init_map = init_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      x_map = x_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      init_y = init_y.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      mask_info = mask_info.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      random_error = random_error.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-      # ==> time,xdim,ydim,zdim,1
+      background_map = background_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+      observation_map = observation_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+      label_map = label_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+      initial_dis_map = initial_dis_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+      observation_mask = observation_mask.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+
+      # axes change [time,zdim,ydim,xdim,1 => time,xdim,ydim,zdim,1]
       land = np.swapaxes(land,1,3)
-      init_map = np.swapaxes(init_map,1,3)
-      x_map = np.swapaxes(x_map,1,3)
-      init_y = np.swapaxes(init_y,1,3)
-      mask_info = np.swapaxes(mask_info,1,3)
-      random_error = np.swapaxes(random_error,1,3)
+      background_map = np.swapaxes(background_map,1,3)
+      observation_map = np.swapaxes(observation_map,1,3)
+      label_map = np.swapaxes(label_map,1,3)
+      initial_dis_map = np.swapaxes(initial_dis_map,1,3)
+      observation_mask = np.swapaxes(observation_mask,1,3)
+ 
   
-  
-      input_x1 = init_map
-      input_x2 = x_map*mask_info + random_error
+      input_x1 = background_map
+      input_x2 = observation_map
       input_x3 = land
-      input_x4 = mask_info
+      input_x4 = observation_mask
       sample_x = np.append(input_x1,input_x2,axis=4)
       sample_x = np.append(sample_x,input_x3,axis=4)
       sample_x = np.append(sample_x,input_x4,axis=4)
-      sample_y0 = init_y
-      sample_y = x_map
+  
+      sample_y0 = initial_dis_map
+      sample_y = label_map
+
   
       val_dis_real_sample = np.append(sample_y,sample_y0,axis=4)
   
@@ -539,60 +513,62 @@ class Train(Module) :
       for i in range(1,vlen) :
         ii = i%73
         i0 = (i-1)%73
-        land = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.land_file.nc','r')
+        
+        observation_map = Dataset('data/Validation_Dataset_Masked_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+        observation_map = observation_map['t'][i,:self.zdim]
+        observation_map = np.ma.masked_values(observation_map,-9.99e+08)
+        observation_map = observation_map.filled(0)
+        
+
+        label_map = Dataset('data/Validation_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+        label_map = label_map['t'][i+1,:self.zdim]
+        label_map = np.ma.masked_values(label_map,-9.99e+08)
+        label_map = label_map.filled(0)
+        
+        initial_dis_map = Dataset('data/Validation_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc','r')
+        initial_dis_map = initial_dis_map['t'][i,:self.zdim]
+        initial_dis_map = np.ma.masked_values(initial_dis_map,-9.99e+08)
+        initial_dis_map = initial_dis_map.filled(0)
+  
+  
+        observation_mask = Dataset('data/Observation_Mask','r')
+        observation_mask = observation_mask['t'][i,:self.zdim]
+        observation_mask = observation_mask.filled(0)
+        
+
+        
+        land = Dataset('data/Land_Mask.nc','r')
         land = land['t'][0,:self.zdim]
         land = land.filled(0)
-        x_map = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/val_data.nc','r')
-        x_map = x_map['t'][i,:self.zdim]
-        x_map = np.ma.masked_values(x_map,-9.99e+08)
-        x_map = x_map.filled(0)
-        init_y = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/val_data.nc','r')
-        init_y = init_y['t'][i-1,:self.zdim]
-        init_y = np.ma.masked_values(init_y,-9.99e+08)
-        init_y = init_y.filled(0)
+ 
   
-        clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
-        clim = clim['t'][ii,:self.zdim]
-        clim = np.ma.masked_values(clim,-9.99e+08)
-        clim = clim.filled(0)
-  
-        init_clim = Dataset('/home/ysjoo/data_assimilation/CESM2/data.v3/v3.clim.nc','r')
-        init_clim = init_clim['t'][i0,:self.zdim]
-        init_clim = np.ma.masked_values(init_clim,-9.99e+08)
-        init_clim = init_clim.filled(0)
-  
-  
-        mask_info = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.obs_info.nc','r')
-        mask_info = mask_info['t'][i,:self.zdim]
-        mask_info = mask_info.filled(0)
-        random_error = Dataset('/home/ysjoo/data_assimilation/CESM2/new_data.v3/v3.random_error.nc','r')
-        random_error = random_error['t'][i,:self.zdim]
-        random_error = random_error.filled(0)
-        x_map = x_map - clim
-        init_y = init_y - clim
-  
-  
-        # time,zdim,ydim,xdim
+        # reshape [time,zdim,ydim,xdim => time,zdim,ydim,xdim,1]
+    
         land = land.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-        x_map = x_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-        init_y = init_y.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-        mask_info = mask_info.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-        random_error = random_error.reshape(-1,self.zdim,self.ydim,self.xdim,1)
-        # ==> time,xdim,ydim,zdim,1
+        observation_map = observation_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+        label_map = label_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+        initial_dis_map = initial_dis_map.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+        observation_mask = observation_mask.reshape(-1,self.zdim,self.ydim,self.xdim,1)
+        
+        # axes change [time,zdim,ydim,xdim,1 => time,xdim,ydim,zdim,1]
         land = np.swapaxes(land,1,3)
-        x_map = np.swapaxes(x_map,1,3)
-        init_y = np.swapaxes(init_y,1,3)
-        mask_info = np.swapaxes(mask_info,1,3)
-        random_error = np.swapaxes(random_error,1,3)
+        observation_map = np.swapaxes(observation_map,1,3)
+        label_map = np.swapaxes(label_map,1,3)
+        initial_dis_map = np.swapaxes(initial_dis_map,1,3)
+        observation_mask = np.swapaxes(observation_mask,1,3)
+ 
         input_x1 = val_gen_map
-        input_x2 = x_map*mask_info + random_error
+        input_x2 = observation_map
         input_x3 = land
-        input_x4 = mask_info
+        input_x4 = observation_mask
         sample_x = np.append(input_x1,input_x2,axis=4)
         sample_x = np.append(sample_x,input_x3,axis=4)
         sample_x = np.append(sample_x,input_x4,axis=4)
-        sample_y0 = init_y
-        sample_y = x_map
+  
+        sample_y0 = initial_dis_map
+        sample_y = label_map
+        
+      
   
         val_dis_real_sample = np.append(sample_y,sample_y0,axis=4)
   #      val_dis_real_sample = np.append(val_dis_real_sample,input_x3,axis=4)
