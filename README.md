@@ -14,24 +14,26 @@ The DeepDA model, which is a GAN model for oceanic DA, comprises a generator tha
   - The data set consists of the following:
   
     (1) Training set (CESM2 LE):
-        
-        1) Traing_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc
-        2) Traing_Dataset_Masked_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc
-        3) Observation_Mask.nc
-        4) Land_Mask.nc
+        - Input
+          1) Traing_Dataset_Masked_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc
+          2) Observation_Mask.nc
+          3) Land_Mask.nc        
+        - Label
+          1) Traing_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc
        
     (2) Validation set (CESM2 LE):
-        
-        1) Validation_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc
-        2) Validation_Dataset_Masked_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc
-        3) Observation_Mask.nc
-        4) Land_mask.nc
-        
+        - Input
+          1) Validation_Dataset_Masked_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc
+          2) Observation_Mask.nc
+          3) Land_mask.nc
+        - Label
+          1) Validation_Dataset_CESM2_LE_Ocean_Potential_Temperature_Anomaly.nc
+
     (3) Test set (Met Office Hadley Centre Intergrated Ocean Database, HadIOD 1.2.0):
-    
-        1) HadIOD_version1.2.0.0_Ocean_Potential_Anomaly.nc
-        2) Observation_Mask.nc
-        3) Land_Mask.nc
+        - Input
+          1) HadIOD_version1.2.0.0_Ocean_Potential_Anomaly.nc
+          2) Observation_Mask.nc
+          3) Land_Mask.nc
         
 
 # Requirement (python packages)
