@@ -39,7 +39,10 @@ The DeepDA model, which is a GAN model for oceanic DA, comprises a generator tha
           3) Land_Mask.nc
         
 
-# Requirement (python packages)
+# Requirement (our environment)
+  - OS: Ubuntu 18.04.6 LTS
+  - GPU: Nvidia Tesla V100
+  - CUDA version: 11.4
   - python = 3.6
   - Tensowflow = 2.2.0 (https://www.tensorflow.org/install/)
   - netCDF4 = 1.5.3
