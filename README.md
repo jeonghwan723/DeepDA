@@ -9,7 +9,7 @@ The DeepDA model, which is a GAN model for oceanic DA, comprises a generator tha
 
 # Data set (data format: netCDF4)
 
-  - You can download data set here (36.2GB): https://168.131.121.120/OCL/Data/DeepDA/data.zip.
+  - You can download data set here (36.2GB): https://drive.google.com/file/d/10EnwnYPJHLLyNFhKF29IXmPMb4mpnBRb/view?usp=sharing
 
   - Put the downloaded 'data' directory into 'DeepDA'.
   
