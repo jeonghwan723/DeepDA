@@ -21,7 +21,6 @@ class Method  :
     return out_conv
   
   def pconv(self,X1,X2,n_feat,k_size,act,int_nor,stride,pad,mask_int,dr_rate=0.0) :
-#    mask_int = initializers.Constant(1)
 
     if act =='relu' :
       act_fun = activations.relu
